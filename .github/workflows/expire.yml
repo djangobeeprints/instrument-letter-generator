@@ -1,0 +1,39 @@
+name: Expire page
+
+on:
+  schedule:
+    - cron: '17 9 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  EXPIRES_ON: '2026-11-14'
+
+jobs:
+  expire:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Replace page once expiry date has passed
+        run: |
+          if [[ "$(date -u +%F)" < "$EXPIRES_ON" ]]; then
+            echo "Not expired yet (expires $EXPIRES_ON)"; exit 0
+          fi
+          if grep -q 'page-expired' index.html; then
+            echo "Already expired"; exit 0
+          fi
+          cat > index.html <<'HTML'
+          <!doctype html>
+          <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>Page expired</title><!-- page-expired --></head>
+          <body style="font:18px system-ui,sans-serif;max-width:30em;margin:4em auto;padding:0 1em">
+          <h1>This page has expired</h1><p>The instrument letter generator is no longer available.</p>
+          </body></html>
+          HTML
+          sed -i 's/^          //' index.html
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Expire page"
+          git push
